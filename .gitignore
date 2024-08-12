@@ -1,0 +1,8 @@
+# Other common ignores
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.env
+.venv/
+**/passwords.txt
