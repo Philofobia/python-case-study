@@ -7,3 +7,4 @@ __pycache__/
 .venv/
 **/passwords.txt
 **/key.key
+**/games.json
