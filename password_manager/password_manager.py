@@ -1,8 +1,9 @@
 from cryptography.fernet import Fernet, InvalidToken
 import os
 
-KEY_FILE = "key.key"
-PASSWORD_FILE = "passwords.txt"
+FOLDER = "password_manager"
+KEY_FILE = os.path.join(FOLDER, "key.key")
+PASSWORD_FILE = os.path.join(FOLDER, "passwords.txt")
 
 
 def write_key():
