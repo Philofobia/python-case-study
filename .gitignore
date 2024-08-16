@@ -8,3 +8,5 @@ __pycache__/
 **/passwords.txt
 **/key.key
 **/games.json
+**/chroma_db/
+**/documents/
