@@ -9,4 +9,5 @@ __pycache__/
 **/key.key
 **/games.json
 **/chroma_db/
+**/database/
 **/documents/
