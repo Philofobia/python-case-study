@@ -11,3 +11,4 @@ Utilizing `scrapy` lib, it returns all the games that are on sale on instant gam
 
 ## RAG project: rag_openai
 
+Lib used: `dotenv, openai, chromadb`. Generating answers based on given documents and queries.

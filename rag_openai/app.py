@@ -2,7 +2,7 @@ import os
 from dotenv import load_dotenv
 from openai import OpenAI
 from chromadb.utils import embedding_functions
-from chromadb import chromadb
+from chromadb import PersistentClient
 
 # GLOBALS
 DIRECTORY_PATH = os.path.join(os.path.dirname(__file__), "documents")
@@ -39,15 +39,15 @@ def split_documents(documents, chunk_size=1000, chunk_overlap=20):
 
 # Define embedding function for OpenAI
 def get_openai_embedding(text):
-    response = openai_client.embeddings.create(input=text, model= "text-embedding-3-small")
+    response = openai_client.embeddings.create(input=text, model="text-embedding-ada-002")
     embedding = response.data[0].embedding
     return embedding
 
 # Initialize chroma client with persistence
-chroma_client = chromadb.PersistentClient(path=DATABASE_PATH)
+chroma_client = PersistentClient(path=DATABASE_PATH)
 collection_name = "documents_collection"
-collection = chroma_client.get_or_create_collection(name=collection_name)# Initialize OpenAI client
 openai_client = OpenAI(api_key=openai_key)
+collection = chroma_client.get_or_create_collection(name=collection_name)# Initialize OpenAI client
 print("OpenAI client initialized", openai_client)
 
 documents = load_documents_from_directory(DIRECTORY_PATH)
@@ -56,18 +56,21 @@ document_chunks = split_documents(documents)
 # Upsert documents into collection
 for document in document_chunks:
     document["embedding"] = get_openai_embedding(document["text"])
+    print("Upserting document: ", document["id"])
+    print("document length: ", len(document["embedding"]))
     collection.upsert(ids=[document["id"]],documents=[document["text"]], embeddings=[document["embedding"]])
+    print("Document upserted")
 
 # def query documents
 def query_documents(query, num_results=2):
-    # query_embedding = get_openai_embedding(query)
-    results = collection.query(query_texts=query, num_results=num_results)
+    embedded_query = get_openai_embedding(query)
+    results = collection.query(query_embeddings=[embedded_query], n_results=num_results)
+    print("Query results: ", results)
 
     #extract relevant chunks
     # relevant chunks is a list of documents that are relevant to the query
-    # [documents for sublist in results["documents"] for documents in sublist] is used to flatten the list
-    # which means that we are getting a list of documents instead of a list of lists of documents
-    relevant_chunks = [documents for sublist in results["documents"] for documents in sublist]
+    # doc is a dictionary with keys "id" and "text"
+    relevant_chunks = [doc for sublist in results["documents"] for doc in sublist]
     print("Return relevant chunks")
     for idx, document in enumerate(results["documents"]):
         doc_id = results["ids"][0][idx]
@@ -75,10 +78,26 @@ def query_documents(query, num_results=2):
         print(f"Document ID: {doc_id}, Distance: {distance}")
     return relevant_chunks
 
-# response = openai_client.chat.completions.create(
-#    model="gpt-3.5-turbo",
-#   messages=[
-#         {"role": "system", "content": "You are a helpful assistant."},
-#         {"role": "user", "content": "What is the capital of the United States?"},
-#    ],
-# )
+# Generate response from openai
+def generate_response(question, relevant_chunks):
+    context = "\n\n".join(relevant_chunks)
+    prompt = (
+        "You are an assistant for question answering.\n"
+        "You are given a question and a list of relevant documents.\n"
+        "You need to provide an answer to the question based on the given documents.\n"
+        "If you cannot find the answer in the documents, you can say 'I don't know'.\n"
+        "\nContext:\n" + context + "\n\nQuestion: " + question
+    )
+    response = openai_client.chat.completions.create(
+        model="gpt-3.5-turbo",
+        messages=[{"role": "system", "content": prompt}, {"role": "user", "content": question}]
+        )
+    return response.choices[0].message
+
+
+# query example
+question = ""
+relevant_chunks = query_documents(question)
+answer = generate_response(question, relevant_chunks)
+
+print("Answer:", answer)
