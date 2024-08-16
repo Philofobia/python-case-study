@@ -92,7 +92,7 @@ def generate_response(question, relevant_chunks):
         model="gpt-3.5-turbo",
         messages=[{"role": "system", "content": prompt}, {"role": "user", "content": question}]
         )
-    return response.choices[0].message
+    return response.choices[0].message["content"]
 
 
 # query example
