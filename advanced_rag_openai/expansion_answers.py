@@ -10,9 +10,11 @@ from langchain.text_splitter import (
 from chromadb.utils.embedding_functions import SentenceTransformerEmbeddingFunction
 from chromadb import PersistentClient
 import umap
+import matplotlib.pyplot as plt
 
 DIRECTORY_PATH = os.path.join(os.path.dirname(__file__), "documents")
 DATABASE_PATH = os.path.join(os.path.dirname(__file__), "database")
+IMAGES_PATH = os.path.join(os.path.dirname(__file__), "images")
 
 # Load the environment variables
 load_dotenv()
@@ -70,10 +72,10 @@ def augment_query_generated(query, model="gpt-3.5-turbo"):
     You have read a book on the topic and want to use those information to answer any question to a friend."""
     messages = [{"role": "system", "content": prompt}, {"role": "user", "content": query}]
 
-    reponse = openai_client.chat.completions.create(
+    response = openai_client.chat.completions.create(
         model=model,
         messages=messages, )
-    content = reponse.choices[0].message["content"]
+    content = response.choices[0].message.content
     return content
 
 original_query = "What are the steps needed to start taking good notes?"
@@ -105,3 +107,45 @@ projected_augmented_query_embedding = project_embeddings(
 projected_retrieved_embeddings = project_embeddings(
     retrieved_embeddings, umap_transform
 )
+
+# Plot the projected query and retrieved documents in the embedding space
+plt.figure()
+
+plt.scatter(
+    projected_dataset_embeddings[:, 0],
+    projected_dataset_embeddings[:, 1],
+    s=10,
+    color="gray",
+)
+plt.scatter(
+    projected_retrieved_embeddings[:, 0],
+    projected_retrieved_embeddings[:, 1],
+    s=100,
+    facecolors="none",
+    edgecolors="g",
+)
+plt.scatter(
+    projected_original_query_embedding[:, 0],
+    projected_original_query_embedding[:, 1],
+    s=150,
+    marker="X",
+    color="r",
+)
+plt.scatter(
+    projected_augmented_query_embedding[:, 0],
+    projected_augmented_query_embedding[:, 1],
+    s=150,
+    marker="X",
+    color="orange",
+)
+
+# Set aspect ratio, title, and axis options
+plt.gca().set_aspect("equal", "datalim")
+plt.title(f"{original_query}")
+plt.axis("off")
+
+# Save the plot to a file
+plt.savefig(f"{IMAGES_PATH}/{original_query}.png")
+
+# Optionally, display the plot if running in an interactive environment
+plt.show()
